@@ -27,10 +27,42 @@ document.addEventListener("DOMContentLoaded", () => {
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
           <p><strong>Participants:</strong></p>
           <ul class="participants-list">
-            ${details.participants.map(p => `<li>${p}</li>`).join('')}
+            ${details.participants.map(p => `
+              <li data-activity="${encodeURIComponent(name)}" data-participant="${encodeURIComponent(p)}">
+                <span class="participant-name">${p}</span>
+                <button class="delete-participant-btn" title="Unregister" aria-label="Unregister ${p}">🗑️</button>
+              </li>
+            `).join('')}
           </ul>
         `;
 
+
+        // Add event listener for delete buttons after rendering
+        setTimeout(() => {
+          const deleteBtns = activityCard.querySelectorAll('.delete-participant-btn');
+          deleteBtns.forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const li = btn.closest('li');
+              const participant = decodeURIComponent(li.getAttribute('data-participant'));
+              const activityName = decodeURIComponent(li.getAttribute('data-activity'));
+              if (confirm(`Unregister ${participant} from ${activityName}?`)) {
+                try {
+                  const response = await fetch(`/activities/${encodeURIComponent(activityName)}/unregister?email=${encodeURIComponent(participant)}`, {
+                    method: 'POST',
+                  });
+                  const result = await response.json();
+                  if (response.ok) {
+                    li.remove();
+                  } else {
+                    alert(result.detail || 'Failed to unregister.');
+                  }
+                } catch (err) {
+                  alert('Error unregistering participant.');
+                }
+              }
+            });
+          });
+        }, 0);
         activitiesList.appendChild(activityCard);
 
         // Add option to select dropdown
@@ -66,6 +98,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Refresh activities list to show new participant
+        await fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
