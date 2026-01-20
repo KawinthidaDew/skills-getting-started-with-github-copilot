@@ -142,3 +142,17 @@ footer {
   padding: 20px;
   color: #666;
 }
+
+.participants-list {
+  list-style-type: disc;
+  margin-left: 20px;
+  padding: 10px;
+  background-color: #fafafa;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+.participants-list li {
+  margin-bottom: 5px;
+  color: #555;
+}
