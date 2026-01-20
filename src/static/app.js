@@ -25,8 +25,44 @@ document.addEventListener("DOMContentLoaded", () => {
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <p><strong>Participants:</strong></p>
+          <ul class="participants-list" style="list-style-type: none; padding-left: 0;">
+            ${details.participants.map(p => `
+              <li data-activity="${encodeURIComponent(name)}" data-participant="${encodeURIComponent(p)}" style="display: flex; align-items: center; margin-bottom: 4px;">
+                <span class="participant-name">${p}</span>
+                <button class="delete-participant-btn" title="Unregister" aria-label="Unregister ${p}" style="background: none; border: none; color: #c00; margin-left: 8px; cursor: pointer; font-size: 1.1em;">🗑️</button>
+              </li>
+            `).join('')}
+          </ul>
         `;
 
+
+        // Add event listener for delete buttons after rendering
+        setTimeout(() => {
+          const deleteBtns = activityCard.querySelectorAll('.delete-participant-btn');
+          deleteBtns.forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const li = btn.closest('li');
+              const participant = decodeURIComponent(li.getAttribute('data-participant'));
+              const activityName = decodeURIComponent(li.getAttribute('data-activity'));
+              if (confirm(`Unregister ${participant} from ${activityName}?`)) {
+                try {
+                  const response = await fetch(`/activities/${encodeURIComponent(activityName)}/unregister?email=${encodeURIComponent(participant)}`, {
+                    method: 'POST',
+                  });
+                  const result = await response.json();
+                  if (response.ok) {
+                    li.remove();
+                  } else {
+                    alert(result.detail || 'Failed to unregister.');
+                  }
+                } catch (err) {
+                  alert('Error unregistering participant.');
+                }
+              }
+            });
+          });
+        }, 0);
         activitiesList.appendChild(activityCard);
 
         // Add option to select dropdown
@@ -50,9 +86,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch(
-        `/activities/${encodeURIComponent(activity)}/signup?email=${encodeURIComponent(email)}`,
+        `/activities/${encodeURIComponent(activity)}/signup`,
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
         }
       );
 
@@ -62,6 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        await fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
@@ -69,7 +110,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       messageDiv.classList.remove("hidden");
 
-      // Hide message after 5 seconds
       setTimeout(() => {
         messageDiv.classList.add("hidden");
       }, 5000);
